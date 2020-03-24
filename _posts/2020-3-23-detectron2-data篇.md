@@ -242,6 +242,41 @@ class MyTransform(Transform):
 对于transform方法，我们要实现三种方法，apply_image,apply_coords,apply_segemtation，用于处理图像本身，图像边界框，图像mask。
 
 
+**instance**
+做完transform以及一系列读取数据的操作后，我们已经获得了新的datalist，但是是不是就结束了呢？
+
+并不是！
+
+因为detectron2在读取数据时不是读取data_dict['annotation']，而是读取data_dict['instance']。如果我们不做mapper，那么调用默认构造dataset时，它会自动帮你去掉annotation,增加instance。但是如果我们构造了mapper，我们就需要自己去完成这一步
+
+如何完成呢，我们可以参照默认的操作：
+
+```python
+  instances = utils.annotations_to_instances(
+                annos, image_shape, mask_format=self.mask_format
+            )
+   dataset_dict["instances"] = utils.filter_empty_instances(instances)
+
+```
+在做完transform返回新的dataset['annotation']后就可以用Instance替换annotation了
+
+不过我们通常还会把annotaion去掉：
+```python
+annos = [
+                utils.transform_instance_annotations(
+                    obj, transforms, image_shape, keypoint_hflip_indices=self.keypoint_hflip_indices
+                )
+                for obj in dataset_dict.pop("annotations")
+                if obj.get("iscrowd", 0) == 0
+            ]
+```
+
+如果前面已经做了transform，那么我们就直接这样
+```python
+annos=dataset_dict.pop('annotations')
+
+```
+
 **总结一下：**
 
 对于自定义数据增强，我们首先定义好一系列的transform方法用于处理图像。
@@ -296,7 +331,11 @@ class MapDataset(data.Dataset):
                 )
 
 ```
-这就是官方的map_dataset,**我并不推荐自定义mapdataset,因为官方的实现非常完美了，我们只需实现好map_func就行了**
+这就是官方的map_dataset
+
+
+
+
 
 
 <font color=red>**在最后，总结一下定义数据集的整个流程8：**</font>
