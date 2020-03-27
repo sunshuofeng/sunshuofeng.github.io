@@ -377,3 +377,52 @@ class WarmupCosineLR(torch.optim.lr_scheduler._LRScheduler):
 
 **所以自定义的scheduler就是更改config文件的配置以及重写自己的get_lr方法**
 
+而如何通过scheduler进行学习率的更新呢？由于学习率的更新需要迭代次数的信息，所以学习率更新通常放在hook中，在run_step后通常是after_step进行
+```python
+lr_scheduler.step()
+```
+这一步。
+
+我们也可以看到，detectron2官方本来就提供了lr_scheduler的hook，只要把optimizer和lr_scheduler传进去，就可以进行学习率的更新了
+```python
+
+class LRScheduler(HookBase):
+    """
+    A hook which executes a torch builtin LR scheduler and summarizes the LR.
+    It is executed after every iteration.
+    """
+
+    def __init__(self, optimizer, scheduler):
+        """
+        Args:
+            optimizer (torch.optim.Optimizer):
+            scheduler (torch.optim._LRScheduler)
+        """
+        self._optimizer = optimizer
+        self._scheduler = scheduler
+
+        # NOTE: some heuristics on what LR to summarize
+        # summarize the param group with most parameters
+        largest_group = max(len(g["params"]) for g in optimizer.param_groups)
+
+        if largest_group == 1:
+            # If all groups have one parameter,
+            # then find the most common initial LR, and use it for summary
+            lr_count = Counter([g["lr"] for g in optimizer.param_groups])
+            lr = lr_count.most_common()[0][0]
+            for i, g in enumerate(optimizer.param_groups):
+                if g["lr"] == lr:
+                    self._best_param_group_id = i
+                    break
+        else:
+            for i, g in enumerate(optimizer.param_groups):
+                if len(g["params"]) == largest_group:
+                    self._best_param_group_id = i
+                    break
+
+    def after_step(self):
+        lr = self._optimizer.param_groups[self._best_param_group_id]["lr"]
+        self.trainer.storage.put_scalar("lr", lr, smoothing_hint=False)
+        self._scheduler.step()
+
+```
