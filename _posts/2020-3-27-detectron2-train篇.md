@@ -1,10 +1,10 @@
 ---
 layout: post
 title: detectron2-train篇
-subtitle: “学习学习！“
+subtitle: "学习学习！"
 author: "Sun"
 date: 2020-3-24
-header_image:  "img/detectron2.png"
+header-img:  "img/detectron2.png"
 tags: 
        - pytorch
        - detectron2
