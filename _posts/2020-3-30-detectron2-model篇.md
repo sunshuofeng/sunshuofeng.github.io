@@ -1590,21 +1590,26 @@ class FastRCNNConvFCHead(nn.Module):
  ### fastrcnn_总结
  
  
-**输入数据的处理：
+**输入数据的处理：**
 输入：DataList----list(dict)
+
 处理：然后经过preprocess_image得到变量image,类型为ImageList，同时分离出DataList中每张图片的instance，得到gt_instance,类型为List(Instnace)
+
 输出：Image----(Batch,C,H,W)   gt_instance----list(Instance)**
 
-**backbone:
+**backbone**:
 输入：image----ImageList.tensor，不是通过get_item获取元素，而是直接拿(batch,Cmax,Hmax,Wmax)作为张量输入
-处理：每张图片都会得到多个特征图,一个ImageList得到一个(batch,C,H,W)的featuremap，然后由于会融合多个尺度的特征，所以有多种不同尺寸的featuremap，但大小都为(batch,C,H,W)
-输出：features----dict(tensor),不同元素就是不同尺度的featuremap**
 
-**RPN
+处理：每张图片都会得到多个特征图,一个ImageList得到一个(batch,C,H,W)的featuremap，然后由于会融合多个尺度的特征，所以有多种不同尺寸的featuremap，但大小都为(batch,C,H,W)
+
+输出：features----dict(tensor),不同元素就是不同尺度的featuremap
+
+**RPN**
 输入：
 images----ImageList ，注意这里就是ImageList，而不是.tensor,
 features---dict(tensor)
 gt_instances----list(instances)
+
 处理:
 1.将gt_instance里的box坐标拿出，构建了一个list(list(boxes))的列表gt_boxes
 2.将features从字典变为列表，将一个个元素放入列表中，此时就变为一个L长度的列表，每一个元素大小为（N,C,H,W)
@@ -1613,24 +1618,26 @@ gt_instances----list(instances)
 5.将anchor与真实框对应，获取其真实修正量与预测标签
 6.计算出rpn网络的损失，分别是修正量的边框回归损失，以及标签的分类损失
 7.将anchor根据预测修正量进行修正，然后进行proposal的筛选，获取出最后的proposal
+8.
 输出：
 proposal-----list(Instance),Instance里包含proposal的坐标以及其预测标签
-loss---dict，里面包含分类损失和边框回归损失**
+loss---dict，里面包含分类损失和边框回归损失
 
 
-**ROI
+**ROI**
 输入：
 images------ImageList
 features----dict(tensor)
 proposals---list(instance)
 gt_insances---list(instance)
+
 处理：
 1.根据proposal与gt_instance来选出proposal对应的真实框，然后再随机抽取proposal进行训练
 2.同上,将features变成列表，将proposal的box坐标单独抽出加入列表
 3.通过roi_pooler,把box弄成类似固定大小的featuremap，输出为（M,C,H,H)，其中H是经过roi_pooler固定大小的尺寸
 4.将roi_pooler的输出经过box_head,提取特征
 5.然后将输出特征送到RPNoutputlayer获取proposal的分类分数和修正量
-6.最后经过rpnoutput，可以通过rpnoutput获取损失，metric，预测分数，预测边框的位置**
+6.最后经过rpnoutput，可以通过rpnoutput获取损失，metric，预测分数，预测边框的位置
 
 这就是整个faster-rcnn的流程！
 
